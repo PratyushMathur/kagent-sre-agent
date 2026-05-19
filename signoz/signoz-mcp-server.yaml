@@ -1,0 +1,65 @@
+# In-cluster deployment of the SigNoz MCP server.
+# The MCP (Model Context Protocol) server translates LLM-issued tool calls
+# (e.g. "signoz_search_logs") into SigNoz API requests, and streams results
+# back. kagent connects to it via a RemoteMCPServer (see
+# signoz-remotemcpserver.yaml).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signoz-mcp
+  # Co-located with SigNoz so it can reach signoz.signoz.svc.cluster.local
+  # over the cluster network without extra NetworkPolicies.
+  namespace: signoz
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signoz-mcp
+  template:
+    metadata:
+      labels:
+        app: signoz-mcp
+    spec:
+      containers:
+      - name: mcp-server
+        # Upstream image maintained by SigNoz. Pin a tag in production.
+        image: signoz/signoz-mcp-server
+        env:
+        # SigNoz API key used by the MCP server to query SigNoz.
+        # TODO: replace this placeholder with a real value, or better,
+        # switch to a secretKeyRef so the key isn't stored in plain YAML.
+        - name: SIGNOZ_API_KEY
+          value: "<SIGNOZ_API_KEY"
+        # In-cluster URL of the SigNoz query service. Matches the default
+        # service name installed by the SigNoz Helm chart.
+        - name: SIGNOZ_URL
+          value: "http://signoz.signoz.svc.cluster.local:8080"
+        # Expose MCP over HTTP so a remote (kagent) client can reach it.
+        # The alternative ("stdio") only works for local subprocess clients.
+        - name: TRANSPORT_MODE
+          value: "http"
+        # Port the MCP server listens on; matches containerPort below.
+        - name: MCP_SERVER_PORT
+          value: "8000"
+        ports:
+        - containerPort: 8000
+---
+# ClusterIP Service that fronts the MCP Deployment. kagent's RemoteMCPServer
+# resolves this DNS name to talk to the pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: signoz-mcp-svc
+  namespace: signoz
+spec:
+  selector:
+    app: signoz-mcp
+  ports:
+    # appProtocol "mcp" is a hint for service-mesh / observability tooling.
+    # It does not change L4 behaviour; traffic is plain TCP.
+    - appProtocol: mcp
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  # ClusterIP is sufficient — only kagent (in-cluster) needs to reach it.
+  type: ClusterIP

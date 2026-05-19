@@ -1,0 +1,30 @@
+# ModelConfig: tells kagent which LLM to use and how to authenticate to it.
+# Agents reference this object by name (spec.modelConfig) to pick their brain.
+#
+# Here we point kagent at OpenRouter via its OpenAI-compatible API, so any
+# OpenRouter-hosted model can be driven through the standard OpenAI SDK path.
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: openrouter-model
+  # Must live in the same namespace as the Agent that references it.
+  namespace: kagent
+
+spec:
+  # Kubernetes Secret holding the OpenRouter API key.
+  # Create it before applying this manifest:
+  #   kubectl -n kagent create secret generic openrouter-secret \
+  #     --from-literal=api-key=sk-or-...
+  apiKeySecret: openrouter-secret
+  apiKeySecretKey: api-key
+
+  # OpenRouter model slug. ":free" picks the free tier of gpt-oss-120b.
+  # Swap for any other OpenRouter model id (e.g. "anthropic/claude-3.5-sonnet").
+  model: openai/gpt-oss-120b:free
+
+  # Use the OpenAI provider plugin; OpenRouter speaks the OpenAI API dialect.
+  provider: OpenAI
+
+  openAI:
+    # Redirect the OpenAI SDK at OpenRouter instead of api.openai.com.
+    baseUrl: https://openrouter.ai/api/v1

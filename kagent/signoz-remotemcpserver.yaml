@@ -1,0 +1,20 @@
+# RemoteMCPServer: registers an externally-hosted MCP server with kagent.
+# kagent will discover the tools the server advertises and make them
+# available to Agents that reference this object.
+apiVersion: kagent.dev/v1alpha2
+kind: RemoteMCPServer
+metadata:
+   name: signoz-mcpserver
+   # Must live in the kagent namespace so Agents in `kagent` can reference it.
+   namespace: kagent
+spec:
+  description: Signoz MCP Server
+  # Cross-namespace cluster-local URL of the Service defined in
+  # signoz-mcp-server.yaml. The "/mcp" path is the MCP HTTP endpoint
+  # exposed when TRANSPORT_MODE=http.
+  url: http://signoz-mcp-svc.signoz.svc.cluster.local:8000/mcp
+  # How long to keep an SSE/streaming response open before giving up.
+  # Long-running tool calls (e.g. large log searches) benefit from this.
+  sseReadTimeout: 5m0s
+  # Per-request timeout for non-streaming MCP calls.
+  timeout: 30s

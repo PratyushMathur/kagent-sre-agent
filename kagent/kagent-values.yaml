@@ -1,0 +1,20 @@
+providers:
+ # OpenAI or Anthropic are supported for auditing 
+ default: openAI
+ openAI:
+   apiKey: $OPENAI_API_KEY
+otel:
+  tracing:
+    enabled: true
+    exporter:
+      otlp:
+        endpoint: http://signoz-otel-collector.signoz.svc.cluster.local:4317
+        timeout: 15
+        insecure: true
+  logging:
+    enabled: true
+    exporter:
+      otlp:
+        endpoint: http://signoz-otel-collector.signoz.svc.cluster.local:4317
+        timeout: 15
+        insecure: true

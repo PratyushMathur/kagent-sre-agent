@@ -1,0 +1,41 @@
+# Helm values for the SigNoz `k8s-infra` chart (the OpenTelemetry collector
+# agent that ships node, pod, and container telemetry into SigNoz).
+#
+# Install with:
+#   helm install k8s-infra signoz/k8s-infra -n signoz -f signoz-agent-values.yaml
+#
+# This file instruments the cluster so SigNoz has data for the kagent
+# SigNoz agent to query. It is NOT a kagent manifest.
+
+# Global labels applied to every signal (log/metric/trace) the agent emits.
+# They appear as resource attributes in SigNoz and are useful for filtering.
+global:
+  # "others" = self-hosted / unknown cloud. Set to aws/gcp/azure when running
+  # on a managed Kubernetes service to enable cloud-specific enrichment.
+  cloud: others
+  # Shows up as `k8s.cluster.name` — rename per cluster so multi-cluster
+  # SigNoz installations stay distinguishable.
+  clusterName: my-cluster
+  # Free-form environment tag (dev/staging/prod). Surfaces as
+  # `deployment.environment`.
+  deploymentEnvironment: dev
+
+# Where the collector agent ships OTLP data. Points at the in-cluster
+# SigNoz OTel collector service installed by the main SigNoz chart.
+otelCollectorEndpoint: http://signoz-otel-collector.signoz.svc.cluster.local:4318
+# In-cluster traffic over plain HTTP — TLS is unnecessary on the pod network.
+otelInsecure: true
+
+presets:
+  # Use the OTLP/HTTP exporter (matches the :4318 endpoint above).
+  otlphttpExporter:
+    enabled: true
+  # Disable the stdout "logging" exporter; it floods pod logs and isn't
+  # needed once OTLP export is working.
+  loggingExporter:
+    enabled: false
+
+otelAgent:
+  # Don't bind a host port on each node. Avoids port conflicts and keeps
+  # the agent reachable only via the cluster network.
+  useHostPort: false
